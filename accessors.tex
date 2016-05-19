@@ -1,0 +1,242 @@
+\documentclass{article}
+
+
+\usepackage{listings}
+\lstset{language=C++,basicstyle=\small\ttfamily}
+
+\title{C++ draft proposal\\
+  ---\\
+  Accessors}
+
+\author{Ronan Keryell \texttt{<ronan.keryell@xilinx.com>}}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+\label{sec:introduction}
+
+Demand for high-performance and power efficiency makes architectural
+considerations more an more important when programming, specially with
+the generalization of distributed computing and heterogeneous
+computing involving accelerators, DSP, GPU, FPGA, etc.
+
+Unfortunately, as for a sequential program running on a CPU, there is
+no performance portability when it is about reaching the maximum
+performance and power efficiency on a given architecture. Some
+execution parameters may have to be tweaked or the architecture of the
+software has to be deeply changed accordingly. Since there are more
+parameters under control in an heterogeneous platform compared to a
+CPU, the exploration space is quite wider. Dealing with
+this an automatic way is an intractable issue in the general case but
+at least we should have some way to express some of these details at
+the C++ level to reach maximum performance and power efficiency.
+
+In current C++ standard and proposals, some architectural aspects can
+already or will be addressed:
+\begin{description}
+\item[\texttt{thread}] can be used to execute some code in parallel
+  on multiple execution units;
+\item[\texttt{allocator}] controls the way allocation happens and how
+  pointers behave, and thus hide some hardware detail for data access;
+\item[constructors and destructors] can hide some architectural details
+  and semantics;
+\item[operator overloading] is useful to hide some hardware
+  operations;
+\item[\texttt{auto} operator overloading] would make cleaner implementation of
+  proxy to some hardware details and cleaning up expression templates;
+\item[fixed-point] type proposals are useful to have better
+  performance on DSP and FPGA;
+\item[SYCL] is a proposal to execute some functors on some
+  accelerators with possibly different address spaces;
+\end{description}
+
+But currently there is no way to specify how the data are accessed and
+if we consider that now most of the energy consumption is spent in
+data transfer, specially with external memory, this is something to
+address.
+
+For example keeping data on a first-level cache in CPU is crucial and
+it is important to express which data will benefit or note from being
+in the cache. Since cache are very small, specifying that some data
+does not take advantage of the cache leaves more room for data in the
+critical path.
+
+In the following we develop and extend the concept of \emph{accessor}
+to express how data are accessed in a C++ program.
+
+
+\section{Accessor}
+\label{sec:accessor}
+
+An accessor is a proxy object that behaves like the object it
+represents but with some ways to change the behaviour when read or
+written.
+
+Most of the behaviour could be done by language extensions or
+\lstinline|#pragma|, but the advantage of having it as a class is that
+it can often be implemented in user-mode C++ for simplicity,
+portability or debug, and also implemented by a compiler in a
+target-specific optimized way on some architectures.
+
+Having a plain object to control accesses provides handy RAII
+framework to hide actions in the accessor constructor and destructor,
+such as switching on and off the power of the system that gives access
+to the object.
+
+
+\subsection{Non unified memory}
+\label{sec:non-unified-memory}
+
+The current C++ memory model assumes more or less that the memory
+address space is uniform. Unfortunately, for HPC class machines from
+the Top 500 or for embedded systems, this simple addressing scheme
+does not hold and there are for example private memory to each
+processor or device that cannot be addressed directly by another
+processor or device.
+
+The motivation for this \lstinline|accessor| proposal actually comes
+from SYCL where some functors are remotely executed but need to
+interact with a global memory. This is also the concept behind PGAS
+(Partitioned Global Address Space) languages or libraries, such as
+Coarray C++ or UPC++, where the memory is physically distributed but
+can be remotely accessed with some explicit language or library
+support instead of transparent virtual shared memory.
+
+A SYCL example:
+\begin{lstlisting}
+// A 1D buffer of N double
+cl::sycl::buffer<double, 1> b { N };
+// [...]
+// Launch on default accelerator:
+cl::sycl::queue {}.submit([&](handler &cgh) {
+  // Get an accessor to write the data remotely
+  auto acc = b.get_access<access::write>(cgh);
+  // A parallel equivalent of std::iota as a kernel named "init"
+  cgh.parallel_for<class init>(N, [=] (auto index) {
+                                acc[index] = index;
+                               });
+  });
+\end{lstlisting}
+
+could be generalized in a framework returning
+\begin{lstlisting}
+std::array<double, N> local;
+accessor<accessor::remote,
+         accessor<accessor::write,
+                  <std::array<double, N>> remote =
+  get_some_runtime_remote(local);
+
+std::copy(std::begin(local), std::end(local), std::begin(remote));
+\end{lstlisting}
+
+Typical environment usable with this could be SHMEM, Portal4, SYCL,
+Coarray C++, RDMA, iWARP, MPI...
+
+
+\subsection{Read/write qualifiers}
+\label{sec:readwrite-qualifiers}
+
+In C++ there is the \lstinline|const| qualifier to specify read-only
+but there is no way to specify other access mode that normally do not
+change the semantics but are useful to increase performance.
+
+Here is a list of accessor types:
+\begin{description}
+\item[\texttt{write}] to access to a write-only data. This avoids for
+  example to load or prefetch the cache from memory before writing;
+\item[\texttt{read}] to prevent writing back data;
+\item[\texttt{read\_write}] normal access by symmetry;
+\item[\texttt{discard\_read}] to read data if they are written first
+  and do not read the initial value at accessor creation. A typical
+  use case is a data locally generated that can be read back locally;
+\item[\texttt{discard\_write}] to write data to be locally read but
+  won't be written back at accessor destruction;
+\item[\texttt{noaccess}] by symmetry, typically to detect
+  inappropriate behaviours in a program.
+\end{description}
+
+
+\subsection{Non temporal access}
+\label{sec:non-temporal-access}
+
+A \lstinline|non_temporal| accessor allows to access data that won't
+be accessed again and typically will not for example use a cache. This
+diminish cache transactions and leave the cache for some more useful
+usage.
+
+
+\subsection{Sequential access}
+\label{sec:sequential-access}
+
+In some case the programmer know accesses to an array are strictly
+sequential but the compiler cannot prove it. By explicitly specifying
+it, a compiler can generate vector memory access or do some parallel
+loop nest pipelining where the memory access is completely replaced
+for example by a hardware FIFO between execution units.
+
+In the program
+\begin{lstlisting}
+{
+  std::accessor<accessor::sequential,
+                accessor::discard_read,
+                accessor::discard_write> a { some_array };
+  for (int i; i = 0; i != N; ++i)
+    a[i] = i;
+  for (int i; i = 0; i != N; ++i)
+    b[i] = a[i]*2;
+}
+\end{lstlisting}
+the compiler could decide to fuse the loop or to generate 2 Kahn's
+processes, 1 producer and 1 consumer, with only an efficient hardware
+FIFO in between and eluding the memory transfer on \lstinline|a[i]|.
+
+
+\subsection{Prefetching}
+\label{sec:prefetching}
+
+\subsection{Burst mode}
+\label{sec:burst-mode}
+
+\subsection{DMA}
+\label{sec:dma}
+
+\subsection{Memory protection}
+\label{sec:memory-protection}
+
+
+\subsection{Bus type}
+\label{sec:bus-type}
+
+\subsection{Access width}
+\label{sec:access-width}
+
+\subsection{Address mode}
+\label{sec:address-mode}
+
+PC-relative, far, near, based, indexed
+
+\subsection{Translation}
+\label{sec:translation}
+
+\subsection{Modulo addressing}
+\label{sec:modulo-addressing}
+
+\subsection{Bit setting}
+\label{sec:bit-setting}
+
+\subsection{Generic proxy}
+\label{sec:generic-proxy}
+
+
+\section{Implicit accessor}
+\label{sec:implicit-accessor}
+
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
