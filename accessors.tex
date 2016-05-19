@@ -1,6 +1,7 @@
-\documentclass{article}
+\documentclass[a4paper]{article}
 
 
+\usepackage{a4wide}
 \usepackage{listings}
 \lstset{language=C++,basicstyle=\small\ttfamily}
 
@@ -8,7 +9,8 @@
   ---\\
   Accessors}
 
-\author{Ronan Keryell \texttt{<ronan.keryell@xilinx.com>}}
+\author{Ronan Keryell \texttt{<ronan.keryell@xilinx.com>}\\
+  xyz \texttt{<xyz@codeplay.com>}}
 
 \begin{document}
 
@@ -49,7 +51,7 @@ already or will be addressed:
 \item[fixed-point] type proposals are useful to have better
   performance on DSP and FPGA;
 \item[SYCL] is a proposal to execute some functors on some
-  accelerators with possibly different address spaces;
+  accelerators with possibly different address spaces.
 \end{description}
 
 But currently there is no way to specify how the data are accessed and
@@ -65,6 +67,18 @@ critical path.
 
 In the following we develop and extend the concept of \emph{accessor}
 to express how data are accessed in a C++ program.
+
+
+\section{Related work}
+\label{sec:related-work}
+
+The concept of view has some similarities but is more focused on some
+kind of objects, such as \lstinline|array_view| for arrays,
+\lstinline|string_view| for strings, or \lstinline|span| to view a
+sequence as a range.
+
+The concept of accessor is more focused on the action of reading or
+writing than on the kind of object.
 
 
 \section{Accessor}
@@ -123,9 +137,7 @@ cl::sycl::queue {}.submit([&](handler &cgh) {
 could be generalized in a framework returning
 \begin{lstlisting}
 std::array<double, N> local;
-accessor<accessor::remote,
-         accessor<accessor::write,
-                  <std::array<double, N>> remote =
+accessor<remote, write, std::array<double, N>> remote =
   get_some_runtime_remote(local);
 
 std::copy(std::begin(local), std::end(local), std::begin(remote));
@@ -166,15 +178,29 @@ be accessed again and typically will not for example use a cache. This
 diminish cache transactions and leave the cache for some more useful
 usage.
 
+For example when generating a huge amount of data to an array, everything else
+would be evicted from the cache without any chance to read the array
+back from the cache anyway.
+
+A use case:
+\begin{lstlisting}
+// An array of 1 TB
+double a[2<<37];
+auto ac = make_accessor<non_temporal,write>(a);
+// Initialize a starting from the end with increasing
+// integer starting at 42
+std::iota(std::par_vec, ac.rbegin(), ac.rend(), 42);
+\end{lstlisting}
+
 
 \subsection{Sequential access}
 \label{sec:sequential-access}
 
-In some case the programmer know accesses to an array are strictly
-sequential but the compiler cannot prove it. By explicitly specifying
-it, a compiler can generate vector memory access or do some parallel
-loop nest pipelining where the memory access is completely replaced
-for example by a hardware FIFO between execution units.
+In some case the programmer knows that accesses to an array are
+strictly sequential but the compiler cannot prove it. By explicitly
+specifying it, a compiler can generate vector memory access or do some
+parallel loop nest pipelining where the memory access is completely
+replaced for example by a hardware FIFO between execution units.
 
 In the program
 \begin{lstlisting}
@@ -196,6 +222,11 @@ FIFO in between and eluding the memory transfer on \lstinline|a[i]|.
 \subsection{Prefetching}
 \label{sec:prefetching}
 
+Latency is a performance killer and if we know in advance we need
+something, we could prefetch it. Note that prefetching is actually
+independent from caching, so it can combine with non temporal access.
+
+
 \subsection{Burst mode}
 \label{sec:burst-mode}
 
@@ -204,7 +235,6 @@ FIFO in between and eluding the memory transfer on \lstinline|a[i]|.
 
 \subsection{Memory protection}
 \label{sec:memory-protection}
-
 
 \subsection{Bus type}
 \label{sec:bus-type}
@@ -220,18 +250,113 @@ PC-relative, far, near, based, indexed
 \subsection{Translation}
 \label{sec:translation}
 
+In embedded systems, it is common to have some level of shared memory
+but mapped physically at different addresses. If there is no virtual
+memory in use in some part of a system, the address in the different
+point-of-views appear as translated by an offset.
+\begin{lstlisting}
+unsigned char frame_buffer[N];
+// The screen memory on the display controller
+std::accessor<translate> b { buffer, offset };
+\end{lstlisting}
+
+
 \subsection{Modulo addressing}
 \label{sec:modulo-addressing}
+
+Implementing some circular buffers may require some kind of modulo
+addressing and some processors have this addressing mode. Since it is
+impossible to detect automatically this feature in the compiler in the
+general way, it should be expressed with an accessor:
+\begin{lstlisting}
+unsigned char buffer[N];
+// b is a kind of infinite array, but with only buffer storage repeated
+std::accessor<modulo> b { buffer };
+\end{lstlisting}
+
 
 \subsection{Bit setting}
 \label{sec:bit-setting}
 
+
+\subsection{Transactional memory}
+\label{sec:transactional-memory}
+
+
 \subsection{Generic proxy}
 \label{sec:generic-proxy}
+
+implementing transactional memory in user mode
+
+mock-up
+
+fault injection
+
+fuzzing
 
 
 \section{Implicit accessor}
 \label{sec:implicit-accessor}
+
+Having to use explicit \texttt{accessor} objects may be painfully
+intrusive and it would be nice to have something lighter. Of course,
+since omnipotent abstract interpretation of a program is impossible,
+some kind of program transformation is required by the programmer to
+express properties of memory access.
+
+We can use language extensions, \lstinline|#pragma| or generalized
+attributes. Language extensions are bad for portability and
+acceptance. \lstinline|#pragma| do not compose well with
+meta-programming. So we focus here on to decorate objects with
+accessors.
+
+\begin{lstlisting}
+// An array of 1 TB
+double a[2<<37] [[std::accessor<non_temporal,sequential>]];
+
+// An implicit accessor is wrapped around all uses of a
+std::iota(a.begin(), a.end(), 0);
+\end{lstlisting}
+
+But also on any scope, such as class, block, namespace... as for
+example to add a behaviour of a transactional memory on all a class:
+\begin{lstlisting}
+template <typename T>
+class message_queue [[std::accessor<transaction>]] {
+  T read() {...}
+
+  void write(T &&t) {...}
+}
+\end{lstlisting}
+
+
+\section{Implementation}
+\label{sec:implementation}
+
+The implementation basics for the proxy objects are:
+\begin{itemize}
+\item for fundamental types, have an implicit conversion operator to
+  the reference to the fundamental types so the accessor can behave
+  like the fundamental type;
+\item for object types, the proxy would publicly inherit from the type to
+  forward all member access to it.
+\end{itemize}
+
+
+\section{Issues}
+\label{sec:issues}
+
+Having some objects appearing at other addresses may put some
+restriction on the type (such as ``trivially copyable'', ``standard
+layout''...).
+
+
+\section{Acknowledgements}
+\label{sec:acknowledgements}
+
+We want to thank all the people from the Khronos OpenCL SYCL committee
+for the fruitful discussions leading to this generalization of the
+concept of accessor.
 
 
 \end{document}
