@@ -16,6 +16,8 @@
 
 \maketitle
 
+\tableofcontents
+
 \section{Introduction}
 \label{sec:introduction}
 
@@ -35,6 +37,24 @@ this an automatic way is an intractable issue in the general case but
 at least we should have some way to express some of these details at
 the C++ level to reach maximum performance and power efficiency.
 
+For example currently there is no way to specify how the data are
+accessed and if we consider that now most of the energy consumption is
+spent in data transfer, specially with external memory, this is
+something to address.
+
+Keeping data on a first-level cache in CPU is crucial and it is
+important to express which data will benefit or note from being in the
+cache. Since cache are very small, specifying that some data does not
+take advantage of the cache leaves more room for data in the critical
+path.
+
+In the following we develop and extend the concept of \emph{accessor}
+to express how data are accessed in a C++ program.
+
+
+\section{Related work}
+\label{sec:related-work}
+
 In current C++ standard and proposals, some architectural aspects can
 already or will be addressed:
 \begin{description}
@@ -50,32 +70,13 @@ already or will be addressed:
   proxy to some hardware details and cleaning up expression templates;
 \item[fixed-point] type proposals are useful to have better
   performance on DSP and FPGA;
+\item the concept of view has some similarities but is more focused on
+  some kind of objects, such as \lstinline|array_view| for arrays,
+  \lstinline|string_view| for strings, or \lstinline|span| to view a
+  sequence as a range;
 \item[SYCL] is a proposal to execute some functors on some
   accelerators with possibly different address spaces.
 \end{description}
-
-But currently there is no way to specify how the data are accessed and
-if we consider that now most of the energy consumption is spent in
-data transfer, specially with external memory, this is something to
-address.
-
-For example keeping data on a first-level cache in CPU is crucial and
-it is important to express which data will benefit or note from being
-in the cache. Since cache are very small, specifying that some data
-does not take advantage of the cache leaves more room for data in the
-critical path.
-
-In the following we develop and extend the concept of \emph{accessor}
-to express how data are accessed in a C++ program.
-
-
-\section{Related work}
-\label{sec:related-work}
-
-The concept of view has some similarities but is more focused on some
-kind of objects, such as \lstinline|array_view| for arrays,
-\lstinline|string_view| for strings, or \lstinline|span| to view a
-sequence as a range.
 
 The concept of accessor is more focused on the action of reading or
 writing than on the kind of object.
@@ -111,8 +112,8 @@ processor or device that cannot be addressed directly by another
 processor or device.
 
 The motivation for this \lstinline|accessor| proposal actually comes
-from SYCL where some functors are remotely executed but need to
-interact with a global memory. This is also the concept behind PGAS
+from OenCL SYCL C++ where some functors are remotely executed but need
+to interact with a global memory. This is also the concept behind PGAS
 (Partitioned Global Address Space) languages or libraries, such as
 Coarray C++ or UPC++, where the memory is physically distributed but
 can be remotely accessed with some explicit language or library
@@ -134,7 +135,8 @@ cl::sycl::queue {}.submit([&](handler &cgh) {
   });
 \end{lstlisting}
 
-could be generalized in a framework returning
+could be generalized in a framework returning a remote to allow remote
+access as:
 \begin{lstlisting}
 std::array<double, N> local;
 accessor<remote, write, std::array<double, N>> remote =
@@ -143,7 +145,7 @@ accessor<remote, write, std::array<double, N>> remote =
 std::copy(std::begin(local), std::end(local), std::begin(remote));
 \end{lstlisting}
 
-Typical environment usable with this could be SHMEM, Portal4, SYCL,
+Typical environments usable with this could be SHMEM, Portal4, SYCL,
 Coarray C++, RDMA, iWARP, MPI...
 
 
@@ -152,7 +154,8 @@ Coarray C++, RDMA, iWARP, MPI...
 
 In C++ there is the \lstinline|const| qualifier to specify read-only
 but there is no way to specify other access mode that normally do not
-change the semantics but are useful to increase performance.
+change the semantics but are useful to increase performance or lower
+power consumption.
 
 Here is a list of accessor types:
 \begin{description}
@@ -214,7 +217,7 @@ In the program
     b[i] = a[i]*2;
 }
 \end{lstlisting}
-the compiler could decide to fuse the loop or to generate 2 Kahn's
+the compiler could decide to fuse the 2 loops or to generate 2 Kahn's
 processes, 1 producer and 1 consumer, with only an efficient hardware
 FIFO in between and eluding the memory transfer on \lstinline|a[i]|.
 
@@ -222,30 +225,119 @@ FIFO in between and eluding the memory transfer on \lstinline|a[i]|.
 \subsection{Prefetching}
 \label{sec:prefetching}
 
-Latency is a performance killer and if we know in advance we need
-something, we could prefetch it. Note that prefetching is actually
-independent from caching, so it can combine with non temporal access.
+Latency is a performance killer and if we know in advance we will read
+some array elements, we could prefetch it. Note that prefetching is
+actually independent from caching, so it can be combined with non temporal
+access.
+
+\begin{lstlisting}
+int a[N];
+// Instruct the memory prefetcher to look 16 element forward
+std::accessor<prefetch<16>> { a_p };
+std::fill(std::begin(a_p), std::end(a_p), 0);
+\end{lstlisting}
 
 
 \subsection{Burst mode}
 \label{sec:burst-mode}
 
+Most of the memory interface works better when memory transfers are
+made with a coarse granularity. It can be specified with this accessor:
+
+Note that since burst mode uses bulk transfer mode, it is not
+interesting for example when transferring small data randomly
+placed. In this case a burst-size of 1 with a non temporal accessor
+can be used.
+
+\begin{lstlisting}
+int a[N*20];
+// Instruct the memory prefetcher to use a burst mode of 20 elements
+std::accessor<burst<20>> a_p { a };
+
+// To generate random integer between 0 and N - 1
+std::default_random_engine r;
+std::uniform_int_distribution<int> d { 0, N - 1 };
+for (int i = 0; i != N; ++i) {
+  // Randomly write blocks of 20 elements
+  p = std::begin(a_p) + 20*d(r);
+  std::fill(p, p + 20, 0);
+}
+\end{lstlisting}
+
+
 \subsection{DMA}
 \label{sec:dma}
+
+To take advantage from DMA to transfer data, the transfer can be
+encoded as a DMA operation with a DMA accessor.
+
 
 \subsection{Memory protection}
 \label{sec:memory-protection}
 
+Out-of-bound memory access is evil and root of many security
+issues. Systematic bound checking is costly but some architectures
+provides this for free so it is interesting to express with a specific
+accessor:
+\begin{lstlisting}
+char a[N];
+// Use a bound-checker accessor to protect from deprecated insecure
+// function
+std::accessor<bound_check> a_s { a, 20 };
+// Use a dangerous function but throw in case of out-of-bound access
+gets(a_s);
+}
+\end{lstlisting}
+
+\textbf{Difficult to have this working}
+
+
 \subsection{Bus type}
 \label{sec:bus-type}
+
+Some systems allow different types of bus an a variable may be
+addressed through these different buses with an accessor specifying a
+bus identifier. The concept is standard but the bus identifiers
+besides the default one are implementation specific:
+\begin{lstlisting}
+char a;
+float b;
+std::accessor<bus<axi4>> a_a { a };
+std::accessor<bus<axi4>> b_a { b };
+std::accessor<bus<main> a_m { a };
+std::accessor<bus<main> b_m { b };
+// Use different buses in parallel to improve bandwidth
+auto sum = a_a + b_m;
+auto prod = a_m + b_a;
+\end{lstlisting}
+
+The synchronization constraints between the various buses are
+implementation dependent.
+
 
 \subsection{Access width}
 \label{sec:access-width}
 
+Embedded systems allow to specify the size of the data-packets
+transferred on a bus. This can be specify with:
+\begin{lstlisting}
+double d;
+// Transfer 8-bit at a time
+std::accessor<bit_width<8>> d_b { d };
+auto a = d_b;
+\end{lstlisting}
+
+
 \subsection{Address mode}
 \label{sec:address-mode}
 
-PC-relative, far, near, based, indexed
+Some architectures allow different addressing mode with different
+trade-off, such as PC-relative, based on a base pointer, near to some
+page, etc. To compile efficiently with this mode a specific accessor
+is provided.
+
+\textbf{Difficult to have this working}
+
 
 \subsection{Translation}
 \label{sec:translation}
@@ -256,8 +348,9 @@ memory in use in some part of a system, the address in the different
 point-of-views appear as translated by an offset.
 \begin{lstlisting}
 unsigned char frame_buffer[N];
+size_t offset = &display - frame_buffer;
 // The screen memory on the display controller
-std::accessor<translate> b { buffer, offset };
+std::accessor<translate> b { frame_buffer, offset };
 \end{lstlisting}
 
 
@@ -278,21 +371,39 @@ std::accessor<modulo> b { buffer };
 \subsection{Bit setting}
 \label{sec:bit-setting}
 
+Some architecture encode in the address bus some semantics which is
+not used as the part of the address itself, such as supervisor mode,
+non executable mode, etc.
+
+A bit-setting accessor allows to change the address bit accordingly
+during read or write operations.
+
 
 \subsection{Transactional memory}
 \label{sec:transactional-memory}
+
+A transactional-memory accessor start a transaction at the accessor
+creation up to its destruction, with some transaction behaviour for
+the threads using this accessor. In case of write data-race, only one
+of the conflicting threads are not rolled back up to the construction
+of the accessor.
 
 
 \subsection{Generic proxy}
 \label{sec:generic-proxy}
 
-implementing transactional memory in user mode
+A proxy accessor delegates all the read and write operations to some 
 
-mock-up
-
-fault injection
-
-fuzzing
+It is useful for example for:
+\begin{itemize}
+\item virtualizing some non existant memory or hardware;
+\item implementing transactional memory in user mode;
+\item testing with some non existing software part by interacting with
+  a mock-up hidden behind an accessor;
+\item override the memory operation to do fault injection for
+  fault-tolerance evaluation;
+\item security testing with fuzzing of inputs.
+\end{itemize}
 
 
 \section{Implicit accessor}
