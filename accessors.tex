@@ -1,20 +1,31 @@
 \documentclass[a4paper]{article}
 
-
+\usepackage{hyperref}
 \usepackage{a4wide}
+\usepackage{url}
 \usepackage{listings}
 \lstset{language=C++,basicstyle=\small\ttfamily}
 
-\title{C++ draft proposal\\
+\title{Accessors\\
   ---\\
-  Accessors}
+  Version 0.1\\
+  C++ draft proposal}
 
-\author{Ronan Keryell \texttt{<ronan.keryell@xilinx.com>}\\
-  xyz \texttt{<xyz@codeplay.com>}}
+\author{Ronan Keryell \texttt{<ronan.keryell@xilinx.com>}}
 
 \begin{document}
 
 \maketitle
+
+\begin{abstract}
+  Accessing data is the most important aspect when it comes to
+  high-performance computing or power efficiency in embedded
+  computing. We propose to abstract data accesses with the concept of
+  \emph{accessor} to give control to the programmer on how fine grain
+  access is done, such as caching, memory burst or remote access in
+  heterogeneous computing.
+\end{abstract}
+
 
 \tableofcontents
 
@@ -24,17 +35,18 @@
 Demand for high-performance and power efficiency makes architectural
 considerations more an more important when programming, specially with
 the generalization of distributed computing and heterogeneous
-computing involving accelerators, DSP, GPU, FPGA, etc.
+computing involving accelerators, DSP, GPU, FPGA, network
+accelerators, etc.
 
 Unfortunately, as for a sequential program running on a CPU, there is
 no performance portability when it is about reaching the maximum
 performance and power efficiency on a given architecture. Some
-execution parameters may have to be tweaked or the architecture of the
+execution parameters may have to be tweaked and/or the architecture of the
 software has to be deeply changed accordingly. Since there are more
 parameters under control in an heterogeneous platform compared to a
 CPU, the exploration space is quite wider. Dealing with
-this an automatic way is an intractable issue in the general case but
-at least we should have some way to express some of these details at
+this in an automatic way is an intractable issue in the general case but
+at least we should have some ways to express some of these details at
 the C++ level to reach maximum performance and power efficiency.
 
 For example currently there is no way to specify how the data are
@@ -43,10 +55,10 @@ spent in data transfer, specially with external memory, this is
 something to address.
 
 Keeping data on a first-level cache in CPU is crucial and it is
-important to express which data will benefit or note from being in the
-cache. Since cache are very small, specifying that some data does not
-take advantage of the cache leaves more room for data in the critical
-path.
+important to express which data will benefit or not from being in the
+cache. Since cache memories are very small and expensive, specifying
+that some data do not take advantage of the cache leaves more room for
+data in the critical path.
 
 In the following we develop and extend the concept of \emph{accessor}
 to express how data are accessed in a C++ program.
@@ -70,16 +82,23 @@ already or will be addressed:
   proxy to some hardware details and cleaning up expression templates;
 \item[fixed-point] type proposals are useful to have better
   performance on DSP and FPGA;
-\item the concept of view has some similarities but is more focused on
-  some kind of objects, such as \lstinline|array_view| for arrays,
+\item[the concept of view] has some similarities but is more focused
+  on some kind of objects, such as \lstinline|array_view| for arrays,
   \lstinline|string_view| for strings, or \lstinline|span| to view a
   sequence as a range;
 \item[SYCL] is a proposal to execute some functors on some
-  accelerators with possibly different address spaces.
+  accelerators with possibly different address spaces;
+\item[ISO/IEC TR 18037] in the C world, ``Information Technology ---
+  Programming languages -- C -- Extensions to support embedded
+  processors'' (ISO/IEC JTC1 SC22 WG14 N1169, 2006-04-04
+  \url{http://www.open-std.org/JTC1/SC22/WG14/www/docs/n1169.pdf})
+  introduces concepts such as the \emph{named address spaces} to
+  represent special kinds of memories, that went recycled into CUDA
+  and OpenCL address spaces, or named registers and special I/O.
 \end{description}
 
-The concept of accessor is more focused on the action of reading or
-writing than on the kind of object.
+The concept of accessor discussed here is more focused on the action
+of reading or writing than on the kind of object.
 
 
 \section{Accessor}
@@ -107,12 +126,12 @@ to the object.
 The current C++ memory model assumes more or less that the memory
 address space is uniform. Unfortunately, for HPC class machines from
 the Top 500 or for embedded systems, this simple addressing scheme
-does not hold and there are for example private memory to each
-processor or device that cannot be addressed directly by another
-processor or device.
+does not hold and there are for example some private memory attached
+to each processor or device that cannot be addressed directly by
+another processor or device.
 
 The motivation for this \lstinline|accessor| proposal actually comes
-from OenCL SYCL C++ where some functors are remotely executed but need
+from OpenCL SYCL C++ where some functors are remotely executed but need
 to interact with a global memory. This is also the concept behind PGAS
 (Partitioned Global Address Space) languages or libraries, such as
 Coarray C++ or UPC++, where the memory is physically distributed but
@@ -128,15 +147,15 @@ cl::sycl::buffer<double, 1> b { N };
 cl::sycl::queue {}.submit([&](handler &cgh) {
   // Get an accessor to write the data remotely
   auto acc = b.get_access<access::write>(cgh);
-  // A parallel equivalent of std::iota as a kernel named "init"
+  // A DIY parallel equivalent of std::iota as a kernel named "init"
   cgh.parallel_for<class init>(N, [=] (auto index) {
                                 acc[index] = index;
                                });
   });
 \end{lstlisting}
 
-could be generalized in a framework returning a remote to allow remote
-access as:
+could be generalized in a framework returning a remote accessor to
+allow remote access as:
 \begin{lstlisting}
 std::array<double, N> local;
 accessor<remote, write, std::array<double, N>> remote =
@@ -153,7 +172,7 @@ Coarray C++, RDMA, iWARP, MPI...
 \label{sec:readwrite-qualifiers}
 
 In C++ there is the \lstinline|const| qualifier to specify read-only
-but there is no way to specify other access mode that normally do not
+but there is no way to specify other access modes that normally do not
 change the semantics but are useful to increase performance or lower
 power consumption.
 
@@ -225,14 +244,14 @@ FIFO in between and eluding the memory transfer on \lstinline|a[i]|.
 \subsection{Prefetching}
 \label{sec:prefetching}
 
-Latency is a performance killer and if we know in advance we will read
-some array elements, we could prefetch it. Note that prefetching is
-actually independent from caching, so it can be combined with non temporal
-access.
+Latency is often a performance killer and if we know in advance that
+we will read some array elements, we could prefetch it. Note that
+prefetching is actually independent from caching, so it can be
+combined with non temporal access.
 
 \begin{lstlisting}
 int a[N];
-// Instruct the memory prefetcher to look 16 element forward
+// Instruct the memory prefetcher to look 16 elements ahead
 std::accessor<prefetch<16>> { a_p };
 std::fill(std::begin(a_p), std::end(a_p), 0);
 \end{lstlisting}
@@ -241,8 +260,8 @@ std::fill(std::begin(a_p), std::end(a_p), 0);
 \subsection{Burst mode}
 \label{sec:burst-mode}
 
-Most of the memory interface works better when memory transfers are
-made with a coarse granularity. It can be specified with this accessor:
+Most of the memory interfaces work better when memory transfers are
+made with a coarse granularity. It can be specified with this accessor.
 
 Note that since burst mode uses bulk transfer mode, it is not
 interesting for example when transferring small data randomly
@@ -271,6 +290,8 @@ for (int i = 0; i != N; ++i) {
 To take advantage from DMA to transfer data, the transfer can be
 encoded as a DMA operation with a DMA accessor.
 
+TODO.
+
 
 \subsection{Memory protection}
 \label{sec:memory-protection}
@@ -289,16 +310,16 @@ gets(a_s);
 }
 \end{lstlisting}
 
-\textbf{Difficult to have this working}
+TODO \textbf{Difficult to have this working}
 
 
 \subsection{Bus type}
 \label{sec:bus-type}
 
-Some systems allow different types of bus an a variable may be
+Some systems allow different types of buses an a variable may be
 addressed through these different buses with an accessor specifying a
-bus identifier. The concept is standard but the bus identifiers
-besides the default one are implementation specific:
+bus identifier. The concept is standard but the bus identifiers,
+besides the default one, are implementation specific:
 \begin{lstlisting}
 char a;
 float b;
@@ -319,7 +340,7 @@ implementation dependent.
 \label{sec:access-width}
 
 Embedded systems allow to specify the size of the data-packets
-transferred on a bus. This can be specify with:
+transferred on a bus. This can be specified with:
 \begin{lstlisting}
 double d;
 // Transfer 8-bit at a time
@@ -331,7 +352,7 @@ auto a = d_b;
 \subsection{Address mode}
 \label{sec:address-mode}
 
-Some architectures allow different addressing mode with different
+Some architectures allow different addressing modes with different
 trade-off, such as PC-relative, based on a base pointer, near to some
 page, etc. To compile efficiently with this mode a specific accessor
 is provided.
@@ -360,7 +381,7 @@ std::accessor<translate> b { frame_buffer, offset };
 Implementing some circular buffers may require some kind of modulo
 addressing and some processors have this addressing mode. Since it is
 impossible to detect automatically this feature in the compiler in the
-general way, it should be expressed with an accessor:
+general case, it should be expressed with an accessor:
 \begin{lstlisting}
 unsigned char buffer[N];
 // b is a kind of infinite array, but with only buffer storage repeated
@@ -392,7 +413,8 @@ of the accessor.
 \subsection{Generic proxy}
 \label{sec:generic-proxy}
 
-A proxy accessor delegates all the read and write operations to some 
+A proxy accessor delegates all the read and write operations to some
+user-provided functors.
 
 It is useful for example for:
 \begin{itemize}
@@ -418,7 +440,7 @@ express properties of memory access.
 We can use language extensions, \lstinline|#pragma| or generalized
 attributes. Language extensions are bad for portability and
 acceptance. \lstinline|#pragma| do not compose well with
-meta-programming. So we focus here on to decorate objects with
+meta-programming. So we focus here on decorating objects with
 accessors.
 
 \begin{lstlisting}
