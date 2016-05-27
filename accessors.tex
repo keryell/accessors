@@ -147,14 +147,15 @@ Coarray C++ or UPC++, where the memory is physically distributed but
 can be remotely accessed with some explicit language or library
 support instead of transparent virtual shared memory.
 
-A SYCL example:
+The use of a (SYCL) accessor can be seen on this SYCL C++ example:
 \begin{lstlisting}
-// A 1D buffer of N double
+// Create a 1D buffer of N double
 cl::sycl::buffer<double, 1> b { N };
 // [...]
 // Launch on default accelerator:
 cl::sycl::queue {}.submit([&](handler &cgh) {
-  // Get an accessor to write the data remotely
+  /* Get an accessor to write the data remotely from inside lambda
+     which is off-loaded to the accelerator */
   auto acc = b.get_access<access::write>(cgh);
   // A DIY parallel equivalent of std::iota as a kernel named "init"
   cgh.parallel_for<class init>(N, [=] (auto index) {
