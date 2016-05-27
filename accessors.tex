@@ -34,11 +34,11 @@
 
 \tableofcontents
 
-\section{Introduction}
-\label{sec:introduction}
+\section{Motivation}
+\label{sec:motivation}
 
 Demand for high-performance and power efficiency makes architectural
-considerations more an more important when programming, specially with
+considerations more and more important when programming, specially with
 the generalization of distributed computing and heterogeneous
 computing involving accelerators, DSP, GPU, FPGA, network
 accelerators, etc.
@@ -65,8 +65,28 @@ cache. Since cache memories are very small and expensive, specifying
 that some data do not take advantage of the cache leaves more room for
 data in the critical path.
 
-In the following we develop and extend the concept of \emph{accessor}
-to express how data are accessed in a C++ program.
+In the following we develop the concept of \emph{accessor} represented
+as a plain C++ class to express how data are accessed in a C++
+program.
+
+An accessor is a proxy object that behaves like the object it
+represents but with some ways to change the behaviour when read or
+written.
+
+Most of the behaviour could be done by language extensions or
+\lstinline|#pragma|, but the advantage of having it as a class is that
+it can often be implemented in user-mode C++ for simplicity,
+portability or debug, and also implemented by a compiler in a
+target-specific optimized way on some architectures.
+
+Having a plain object to control accesses provides handy RAII
+framework to hide actions in the accessor constructor and destructor,
+such as setting up the communication framework or switching on and off
+the power of the system that gives access to the object.
+
+Having access properties encoded in the type itself allows propagation
+though generic templated function calls and allows code specialization
+with metaprogramming according to some access properties.
 
 
 \section{Related work}
@@ -108,22 +128,6 @@ of reading or writing than on the kind of object.
 
 \section{Accessor}
 \label{sec:accessor}
-
-An accessor is a proxy object that behaves like the object it
-represents but with some ways to change the behaviour when read or
-written.
-
-Most of the behaviour could be done by language extensions or
-\lstinline|#pragma|, but the advantage of having it as a class is that
-it can often be implemented in user-mode C++ for simplicity,
-portability or debug, and also implemented by a compiler in a
-target-specific optimized way on some architectures.
-
-Having a plain object to control accesses provides handy RAII
-framework to hide actions in the accessor constructor and destructor,
-such as switching on and off the power of the system that gives access
-to the object.
-
 
 \subsection{Non unified memory}
 \label{sec:non-unified-memory}
