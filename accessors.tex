@@ -10,17 +10,29 @@
 
 \title{Accessors\\
   ---\\
-  a C++ \\
-  ---\\
-  Version 0.2\\
-  C++ draft proposal}
+  a C++ standard library class to qualify data accesses}
 
-\author{Ronan Keryell (Xilinx, \texttt{ronan.keryell at xilinx dot com})
-  \and Lee Howes (Facebook, \texttt{xrikcus at gmail dot com})}
+\author{Ronan Keryell (Xilinx)
+  \and Lee Howes (Facebook)
+  \and Joël Falcou (NumScale)}
 
 \begin{document}
 
 \maketitle
+
+\begin{tabular}{|r|l|}
+  \hline
+  \textbf{Document} & P0367R0\\\hline
+  \textbf{Date} & 2016-05-30\\\hline
+  \textbf{Project} & ISO/IEC JTC1 SC22 WG21 Programming Language C++\\\hline
+  \textbf{Audience} & SG14, SG1, LEWG\\\hline
+  \textbf{Authors} &  Ronan Keryell (Xilinx), Lee Howes (Facebook)\\\hline
+  \textbf{E-mails} & \texttt{ronan.keryell at xilinx dot com}\\
+                   & \texttt{xrikcus at gmail dot com}\\
+                   & \texttt{joel.falcou at numscale dot com}\\\hline
+  \textbf{Reply to} & \texttt{ronan.keryell at xilinx dot com}\\\hline
+\end{tabular}
+
 
 \begin{abstract}
   Accessing data is the most important aspect when it comes to
@@ -36,9 +48,9 @@
   behaves like the wrapped object but adds access properties to it or
   change the access behaviour.
 
-  For example if you have a slow I/O or memory access (a special case
-  of slow I/O nowadays...) but you know that pretty often the result
-  is 42 for obvious reasons, you may rewrite your code
+  For example if you have a slow I/O or a memory access (a special
+  case of slow I/O nowadays...) but you know that pretty often the
+  result is 42 for obvious reasons, you may rewrite your code
   \begin{lstlisting}
     auto result = f(some_io());
   \end{lstlisting}
@@ -53,6 +65,8 @@
   predicted. If not, the normal evaluation of \lstinline|f()| goes on.
 \end{abstract}
 
+
+\clearpage
 
 \tableofcontents
 
@@ -136,6 +150,7 @@ already or will be addressed:
   sequence as a range;
 \item[SYCL] is a proposal to execute some functors on some
   accelerators with possibly different address spaces;
+\item non-temporal accessor in Boost.SIMD;
 \item[ISO/IEC TR 18037] in the C world, ``Information Technology ---
   Programming languages -- C -- Extensions to support embedded
   processors'' (ISO/IEC JTC1 SC22 WG14 N1169, 2006-04-04
@@ -591,10 +606,6 @@ specially Ralph Wittig, Jeff Fifield and Sam Bayliss.
 
 Thanks to Michael Wong for helping bootstrapping this proposal in the
 C++ SG14 committee.
-
-Thanks to Joël Falcou for the discussions on metaprogramming and
-non-temporal accessor in Boost.SIMD, besides for having open the eyes
-of Ronan Keryell on C++ few years ago.
 
 The PIPS team from MINES ParisTech and the Par4All team at SILKAN are
 thanked for the feedback on compilers using polyhedral techniques for
