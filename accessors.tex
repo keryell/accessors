@@ -494,7 +494,34 @@ restriction on the type (such as ``trivially copyable'', ``standard
 layout''...).
 
 
-\section{Acknowledgements}
+\section{Conclusion}
+\label{sec:conclusion}
+
+Since accessing data is a real issue today for performance and power
+efficiency reasons, we introduce the concept of accessor to give the
+programmer some ways to optimize data accesses or extend data accesses
+beyond Von Neuman's architecture, the natural scope of C/C++,
+involving distributed memory and heterogeneous architectures.
+
+We propose to control various aspects such as simple as read/write
+access control down to hardware bus selection, cache control,
+pipelining, etc.
+
+Instead of extending the language, we propose to encapsulate accesses
+in normal STL classes, the \lstinline|std::accessor|, to wrap up
+objects and add properties to their accesses. This class is templated
+to encode various properties that compose nicely.
+
+Having this information available in the type system allows
+introspection and metaprogramming at compile time with specialization
+according to the types of possible data accesses.
+
+Combined with concepts such as executors and ranges, it allows
+building very-high level parallel distributed applications with very
+extreme low-level bare-metal optimizations.
+
+
+\section*{Acknowledgements}
 \label{sec:acknowledgements}
 
 We want to thank all the people from the Khronos OpenCL SYCL committee
