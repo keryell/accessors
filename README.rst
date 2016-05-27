@@ -5,7 +5,7 @@ Accessors: a C++ standard library class to qualify data accesses
 :Date:      2016-05-30
 :Project:   ISO/IEC JTC1 SC22 WG21 Programming Language C++
 :Audience:  SG14, SG1, LEWG
-:Author:    Ronan Keryell (Xilinx), Lee Howes (Facebook), Joël Falcou (NumScale)
+:Author:    Ronan Keryell (Xilinx), Joël Falcou (NumScale)
 
 Accessing data is the most important aspect when it comes to
 high-performance computing or power efficiency in embedded computing.
