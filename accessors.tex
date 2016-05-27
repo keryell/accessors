@@ -510,6 +510,29 @@ It is useful for example for:
 \end{itemize}
 
 
+\section{Type traits}
+\label{sec:type-traits}
+
+Having classes to qualify accesses makes possible some metaprogramming
+according to these type properties.
+
+For this there are some type traits to introspect accessors at compile
+time, in the form of
+\texttt{std::is\_accessor<\emph{property\_list}>(acc)} or
+\texttt{std::get\_accessor<\emph{property\_list}>(acc)}.
+
+For example it is possible to test if 2 accessor types are aliasing or
+not:
+\begin{lstlisting}
+auto vector_copy = [](auto src, auto dst) {
+  if constexpr (std::is_accessor_v<aliasing_with>(src, dst))
+    slow_conservative_copy(src, dst);
+  else
+    crazy_aggressive_copy(src, dst);
+};
+\end{lstlisting}
+
+
 \section{Implicit accessor}
 \label{sec:implicit-accessor}
 
