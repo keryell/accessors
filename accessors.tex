@@ -574,8 +574,8 @@ class message_queue [[std::accessor<transaction>]] {
 \end{lstlisting}
 
 
-\section{Implementation}
-\label{sec:implementation}
+\section{Implementation ideas}
+\label{sec:implementation-ideas}
 
 The implementation basics for the proxy objects are:
 \begin{itemize}
@@ -583,8 +583,28 @@ The implementation basics for the proxy objects are:
   the reference to the fundamental types so the accessor can behave
   like the fundamental type;
 \item for object types, the proxy would publicly inherit from the type to
-  forward all member access to it.
+  forward all member access to it;
+\item the concept of accessor can just inherits from a reference
+  accessor class implementing the proxy behaviour according to the
+  basic type (fundamental, array, class, pointer);
+\item each kind of accessor inherits from another accessor class and
+  adds its own properties to it as member types and optional member
+  variables and methods, so at the end a full accessor is an
+  aggregation as an inheritance 
 \end{itemize}
+
+WIP:
+\begin{lstlisting}
+template <typename T> struct accessor : {
+  typename g
+}
+
+struct
+  std::accessor<accessor::sequential,
+                accessor::discard_read,
+                accessor::discard_write> a { some_array };
+
+\end{lstlisting}
 
 
 \section{Issues}
