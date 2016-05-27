@@ -260,7 +260,13 @@ auto ac = make_accessor<non_temporal,write>(a);
 // Initialize a starting from the end with increasing
 // integer starting at 42
 std::iota(std::par_vec, ac.rbegin(), ac.rend(), 42);
-\end{lstlisting}
+\end{lstlisting}%>>
+
+
+\subsection{Aliasing}
+\label{sec:aliasing}
+
+  www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3988.pdf
 
 
 \subsection{Sequential access}
