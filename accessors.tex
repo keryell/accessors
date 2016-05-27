@@ -10,7 +10,7 @@
 
 \title{Accessors\\
   ---\\
-  C++ library class to qualify data access\\
+  a C++ \\
   ---\\
   Version 0.2\\
   C++ draft proposal}
@@ -25,14 +25,37 @@
 \begin{abstract}
   Accessing data is the most important aspect when it comes to
   high-performance computing or power efficiency in embedded
-  computing. We propose to abstract data accesses through an
-  \emph{accessor} class to give control to the programmer on how fine
-  grain access is done, such as caching, memory burst or remote access
-  in heterogeneous computing.
+  computing.
+
+  We propose to abstract data accesses through an \emph{accessor}
+  class to give control to the programmer on how fine grain access is
+  done, such as caching, memory burst or remote access in
+  heterogeneous computing.
+
+  The \lstinline|std::accessor<>| class is a proxy wrapper that
+  behaves like the wrapped object but adds access properties to it or
+  change the access behaviour.
+
+  For example if you have a slow I/O or memory access (a special case
+  of slow I/O nowadays...) but you know that pretty often the result
+  is 42 for obvious reasons, you may rewrite your code
+  \begin{lstlisting}
+    auto result = f(some_io());
+  \end{lstlisting}
+  to
+  \begin{lstlisting}
+    auto result = f(make_accessor<likely> { some_io(), 42 });
+  \end{lstlisting}
+  and the compiler can decide for example to clone the execution of
+  \lstinline|f| to compute ahead \lstinline|f(42)| or even to
+  \lstinline|constexpr|-evaluate it and the result is only committed
+  when \lstinline|some_io()| comes back and the value is verified as
+  predicted. If not, the normal evaluation of \lstinline|f()| goes on.
 \end{abstract}
 
 
 \tableofcontents
+
 
 \section{Motivation}
 \label{sec:motivation}
@@ -54,7 +77,7 @@ this in an automatic way is an intractable issue in the general case but
 at least we should have some ways to express some of these details at
 the C++ level to reach maximum performance and power efficiency.
 
-For example currently there is no way to specify how the data are
+For example, currently there is no way to specify how the data are
 accessed and if we consider that now most of the energy consumption is
 spent in data transfer, specially with external memory, this is
 something to address.
@@ -399,8 +422,8 @@ std::accessor<modulo> b { buffer };
 \end{lstlisting}
 
 
-\subsection{Bit setting}
-\label{sec:bit-setting}
+\subsection{Address bit setting}
+\label{sec:address-bit-setting}
 
 Some architecture encode in the address bus some semantics which is
 not used as the part of the address itself, such as supervisor mode,
@@ -418,6 +441,40 @@ creation up to its destruction, with some transaction behaviour for
 the threads using this accessor. In case of write data-race, only one
 of the conflicting threads are not rolled back up to the construction
 of the accessor.
+
+
+\subsection{Pipelined access}
+\label{sec:pipelined-access}
+
+
+\subsection{Prediction}
+\label{sec:prediction}
+
+Sometime the programmer knows some probabilities about the
+distribution of values and this can be useful for probabilistic
+optimization. For example in
+\begin{lstlisting}
+int v = some_io();
+// Execute f() ahead knowing that most of the time v is 0
+std::accessor<likely> prediction { v, 0 };
+auto result = f(prediction);
+\end{lstlisting}
+the compiler can decide for example to clone the execution of
+\texttt{f} with some predication to remove side effects while doing a
+speculative execution. The actual \texttt{result} will be really
+committed only when \texttt{v} come out from the network and is
+compared to the predicted value.
+
+
+We can have a PGO (Profile-Guided Optimization) version of it to
+instruct the compiler to instrument the code to do some statistical
+analysis of the most common value:
+\begin{lstlisting}
+// Execute f() ahead after some PGO analysis to figure out common values
+auto result = f(make_accessor<pgo_likely> { some_io() });
+\end{lstlisting}
+
+We can allow several likely values too.
 
 
 \subsection{Generic proxy}
