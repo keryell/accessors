@@ -489,10 +489,11 @@ auto a = d_b;
 
 Some architectures allow different addressing modes with different
 trade-off, such as PC-relative, based on a base pointer, near to some
-page, etc. To compile efficiently with this mode a specific accessor
+page, etc. To compile efficiently with this mode, a specific accessor
 is provided.
 
-\textbf{Difficult to have this working}
+The available modes are implementation dependent, besides the
+\lstinline|std::accessor<address_mode<normal>>|.
 
 
 % \subsection{Affinity}
