@@ -145,9 +145,10 @@ architectural aspects can already or will be addressed:
   \item[\texttt{auto} operator overloading] would make cleaner
     implementation of proxy to some hardware details and cleaning up
     expression templates;
-  \item[operator dot overloading with function objects]
-    \cite{C++:P0060R0:function_operator_dot} presents some interesting
-    use case to change the object behaviour;
+  \item[operator dot overloading] \cite{C++:P00252R0:dot_operator}
+    allows changing the behaviour and some extensions to generate
+    function objects \cite{C++:P0060R0:function_operator_dot} allow
+    interesting use case to change the object behaviour;
   \end{description}
 \item[fixed-point] type proposals are useful to have better
   performance on DSP and FPGA;
@@ -167,7 +168,9 @@ architectural aspects can already or will be addressed:
   accelerators with possibly different address spaces, with the
   concept of \lstinline|array_view| representing remote access to
   multidimensional arrays;
+
 \item non-temporal accessor in Boost.SIMD;
+
 \item[ISO/IEC TR 18037] in the C world, ``Information Technology ---
   Programming languages -- C -- Extensions to support embedded
   processors'' (ISO/IEC JTC1 SC22 WG14 N1169, 2006-04-04
