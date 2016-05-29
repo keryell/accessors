@@ -551,6 +551,24 @@ the threads using this accessor. In case of write data-race, only one
 of the conflicting threads are not rolled back up to the construction
 of the accessor.
 
+For example the 2 following functions
+\begin{lstlisting}
+int shared_data[N];
+
+void f() {
+  std::accessor<transaction> a { shared_data };
+  foo(a);
+}
+
+void g() {
+  std::accessor<transaction> b { shared_data };
+  bar(b);
+}
+\end{lstlisting}
+may be executed from 2 different threads and will use a transactional
+memory behaviour if available, or otherwise the implementation will
+fallback on a lock-based solution.
+
 
 \subsection{Pipelined access}
 \label{sec:pipelined-access}
