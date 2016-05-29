@@ -408,6 +408,54 @@ for (int i = 0; i != N; ++i) {
 \end{lstlisting}
 
 
+\subsection{Pipelined access}
+\label{sec:pipelined-access}
+
+Software loop pipelining is a classical loop transformation to reduce
+intra-iteration dependency by rewriting
+\begin{lstlisting}
+for (int i = 0; i < N; ++i)
+  a[i] = f(b[i]);
+\end{lstlisting}
+to (assuming $N > 1$):
+\begin{lstlisting}
+// Prelude
+auto r = b[0];
+auto w = f(r);
+r = b[1];
+// Pipelined loop
+for (int i = 0; i < N - 2; ++i) {
+  a[i] = w;
+  w = f(r); // For i + 1
+  r = b[i + 2];
+}
+// Postlude
+a[N - 2] = w;
+a[N - 1] = f(r);
+\end{lstlisting}
+which has tremendous effect on low-end processors (micro-controller
+with no cache) or FPGA.
+
+A compiler is expected to do this kind of transformations
+automatically but some times cannot figure out automatically if it is
+legal or what is the actual benefit, for example when iterating on
+some complex iterators. By using an \lstinline|accessor<pipelinable>|
+compiler can generate a pipelined loop:
+\begin{lstlisting}
+auto f = [](auto input, auto output) {
+  std::transform(std::cbegin(input), std::cend(input),
+                   std::begin(output), func);
+};
+
+int in[N], out[N];
+
+// Call a pipelined implementation of f without requiring
+// interprocedural analysis of func
+f(std::make_accessor<pipelinable> { in },
+  std::make_accessor<pipelinable> { out });
+\end{lstlisting}
+
+
 \subsection{DMA}
 \label{sec:dma}
 
@@ -568,10 +616,6 @@ void g() {
 may be executed from 2 different threads and will use a transactional
 memory behaviour if available, or otherwise the implementation will
 fallback on a lock-based solution.
-
-
-\subsection{Pipelined access}
-\label{sec:pipelined-access}
 
 
 \subsection{Prediction}
