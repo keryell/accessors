@@ -159,8 +159,14 @@ architectural aspects can already or will be addressed:
   \item[array\_ref] \cite{C++:P0009R1:array_ref} is a proxy object to
     view some array-like objects in various ways;
   \end{description}
-\item[SYCL] is a proposal to execute some functors on some
-  accelerators with possibly different address spaces;
+\item[SYCL] is a C++ OpenCL standard from Khronos to execute some
+  functors on some accelerators with possibly different address
+  spaces, with the concept of accessors representing remote access to
+  multidimensional arrays \cite{C++:P00236R0:SYCL};
+\item[C++AMP] is a C++ extension to execute some functors on some
+  accelerators with possibly different address spaces, with the
+  concept of \lstinline|array_view| representing remote access to
+  multidimensional arrays;
 \item non-temporal accessor in Boost.SIMD;
 \item[ISO/IEC TR 18037] in the C world, ``Information Technology ---
   Programming languages -- C -- Extensions to support embedded
