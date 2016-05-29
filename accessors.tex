@@ -501,16 +501,23 @@ encoded as a DMA operation with a DMA accessor.
 
 \begin{lstlisting}
 int far_far_away[N];
-int near_and_fast[N];
 {
+  int near_and_fast[N];
   auto make_accessor<dma> { far_far_away, near_and_fast };
   std::generate(p, p + 20, 0);
-}near_and_fast
 }
 \end{lstlisting}
-TODO.
 
-% How to deal with generic DMA patterns, non compact objects?
+The read/write accessor mode can be used to remove useless copy in the
+constructor or the destructor.
+
+More complex data transfers may be defined using static DMA
+descriptors (can be synthesized in hardware on FPGA) or dynamic DMA
+descriptors given in the accessor constructor.
+
+% Add a split constructor or use futures to deal with asynchronous
+% DMA?
+
 
 % \subsection{Memory protection}
 % \label{sec:memory-protection}
