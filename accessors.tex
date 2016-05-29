@@ -2,11 +2,60 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+%\usepackage{xcolor}
 \usepackage{hyperref}
+\hypersetup{colorlinks}
+
 \usepackage{a4wide}
 \usepackage{url}
 \usepackage{listings}
 \lstset{language=C++,basicstyle=\small\ttfamily}
+\lstset{%
+  backgroundcolor=\color[rgb]{0.95, 0.95, 0.95},
+  tabsize=2,
+  rulecolor=,
+  % basicstyle=\scriptsize,
+  upquote=true,
+  %aboveskip={1.5\baselineskip},
+  columns=fixed,
+  extendedchars=true,
+  breaklines=true,
+  % prebreak = \raisebox{0ex}[0ex][0ex]{\ensuremath{\hookleftarrow}},
+  frame=single,
+  showtabs=false,
+  showspaces=false,
+  showstringspaces=false,
+  identifierstyle=\ttfamily\bfseries,
+  keywordstyle=\color[rgb]{1.0,0,0},
+  keywordstyle=[1]\color[rgb]{0,0,0.75},
+  keywordstyle=[2]\color[rgb]{0.5,0.0,0.0},
+  keywordstyle=[3]\color[rgb]{0.127,0.427,0.514},
+  keywordstyle=[4]\color[rgb]{0.4,0.4,0.4},
+  keywordstyle=[5]\color[rgb]{1.0,0,0},
+  commentstyle=\color[rgb]{0.133,0.545,0.133},
+  stringstyle=\color[rgb]{0.639,0.082,0.082},
+}
+
+% constexpr is lacking
+\lstset{morekeywords={%
+    constexpr,
+  }
+}
+
+\lstset{morekeywords=[2]{%
+    std,
+  }
+}
+
+\lstset{morekeywords=[3]{%
+    accessor,
+  }
+}
+
+\lstset{morekeywords=[5]{%
+    make_accessor,
+  }
+}
 
 % Limit line overflow
 \sloppy
