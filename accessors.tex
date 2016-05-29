@@ -38,7 +38,8 @@
 \begin{abstract}
   Accessing data is the most important aspect when it comes to
   high-performance computing or power efficiency in embedded
-  computing.
+  computing. Furthermore, generalizing C++ to targets such as GPU or
+  FPGA requires even finer control in the programmer hands.
 
   We propose to abstract data accesses through an \emph{accessor}
   class to give control to the programmer on how fine grain access is
@@ -384,7 +385,8 @@ In some case the programmer knows that accesses to an array are
 strictly sequential but the compiler cannot prove it. By explicitly
 specifying it, a compiler can generate vector memory access or do some
 parallel loop nest pipelining where the memory access is completely
-replaced for example by a hardware FIFO between execution units.
+replaced for example by a hardware FIFO between execution units,
+specially in the case of low level targets (FPGA).
 
 In the program
 \begin{lstlisting}
@@ -435,7 +437,7 @@ int a[N*20];
 // Instruct the memory prefetcher to use a burst mode of 20 elements
 std::accessor<burst<20>> a_p { a };
 
-// To generate random integer between 0 and N - 1
+// To generate random integers between 0 and N - 1
 std::default_random_engine r;
 std::uniform_int_distribution<int> d { 0, N - 1 };
 for (int i = 0; i != N; ++i) {
@@ -450,12 +452,14 @@ for (int i = 0; i != N; ++i) {
 \label{sec:pipelined-access}
 
 Software loop pipelining is a classical loop transformation to reduce
-intra-iteration dependency by rewriting
+intra-iteration dependency which has tremendous effect on low-end
+processors (micro-controller with no cache) or specialized
+architectures (FPGA), by rewriting
 \begin{lstlisting}
 for (int i = 0; i < N; ++i)
   a[i] = f(b[i]);
 \end{lstlisting}
-to (assuming $N > 1$):
+(assuming $N \geq 2$) to:
 \begin{lstlisting}
 // Prelude
 auto r = b[0];
@@ -471,14 +475,12 @@ for (int i = 0; i < N - 2; ++i) {
 a[N - 2] = w;
 a[N - 1] = f(r);
 \end{lstlisting}
-which has tremendous effect on low-end processors (micro-controller
-with no cache) or FPGA.
 
 A compiler is expected to do this kind of transformations
 automatically but some times cannot figure out automatically if it is
 legal or what is the actual benefit, for example when iterating on
 some complex iterators. By using an \lstinline|accessor<pipelinable>|
-compiler can generate a pipelined loop:
+the compiler can generate a pipelined loop:
 \begin{lstlisting}
 auto f = [](auto input, auto output) {
   std::transform(std::cbegin(input), std::cend(input),
@@ -802,21 +804,10 @@ The implementation basics for the proxy objects are:
 \item each kind of accessor inherits from another accessor class and
   adds its own properties to it as member types and optional member
   variables and methods, so at the end a full accessor is an
-  aggregation as an inheritance 
+  aggregation as an inheritance list;
+\item some accessors such as the generic proxy accessor may require
+  real compiler support.
 \end{itemize}
-
-WIP:
-\begin{lstlisting}
-template <typename T> struct accessor : {
-  typename g
-}
-
-struct
-  std::accessor<accessor::sequential,
-                accessor::discard_read,
-                accessor::discard_write> a { some_array };
-
-\end{lstlisting}
 
 
 \section{Issues}

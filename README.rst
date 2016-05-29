@@ -9,6 +9,8 @@ Accessors: a C++ standard library class to qualify data accesses
 
 Accessing data is the most important aspect when it comes to
 high-performance computing or power efficiency in embedded computing.
+Furthermore, generalizing C++ to targets such as GPU or FPGA requires
+even finer control in the programmer hands.
 
 We propose to abstract data accesses through an accessor class to give
 control to the programmer on how fine grain access is done, such as
