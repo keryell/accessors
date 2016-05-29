@@ -424,24 +424,25 @@ TODO.
 
 % How to deal with generic DMA patterns, non compact objects?
 
-\subsection{Memory protection}
-\label{sec:memory-protection}
+% \subsection{Memory protection}
+% \label{sec:memory-protection}
 
-Out-of-bound memory access is evil and root of many security
-issues. Systematic bound checking is costly but some architectures
-provides this for free so it is interesting to express with a specific
-accessor:
-\begin{lstlisting}
-char a[N];
-// Use a bound-checker accessor to protect from deprecated insecure
-// function
-std::accessor<bound_check> a_s { a, 20 };
-// Use a dangerous function but throw in case of out-of-bound access
-gets(a_s);
-}
-\end{lstlisting}
+% Out-of-bound memory access is evil and root of many security
+% issues. Systematic bound checking is costly but some architectures
+% provides this for free so it is interesting to express with a specific
+% accessor:
+% \begin{lstlisting}
+% char a[N];
+% // Use a bound-checker accessor to protect from deprecated insecure
+% // function
+% std::accessor<bound_check> a_s { a, 20 };
+% // Use a dangerous function but throw in case of out-of-bound access
+% gets(a_s);
+% }
+% \end{lstlisting}
 
-TODO \textbf{Difficult to have this working}
+% TODO \textbf{Difficult to have this working}
+% %% Already addressed by P0122R1 span
 
 
 \subsection{Bus type}
