@@ -707,7 +707,13 @@ We can allow several likely values too.
 
 A proxy accessor delegates all the read and write operations to some
 user-provided functors.
-
+\begin{lstlisting}
+void instrument(int v[]) {
+  std::accessor<proxy> p { v, read_functor, write_functor };
+  // Call f on p instead of v to intercept the read and write
+  f(p);
+}
+\end{lstlisting}
 It is useful for example for:
 \begin{itemize}
 \item virtualizing some non existant memory or hardware;
