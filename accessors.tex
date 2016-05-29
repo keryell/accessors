@@ -123,8 +123,9 @@ such as setting up the communication framework or switching on and off
 the power of the system that gives access to the object.
 
 Having access properties encoded in the type itself allows propagation
-though generic templated function calls and allows code specialization
-with metaprogramming according to some access properties.
+though generic templated function calls or lambda captures and allows
+code specialization with metaprogramming according to some access
+properties.
 
 
 \section{Related work}
@@ -336,7 +337,36 @@ std::iota(std::par_vec, ac.rbegin(), ac.rend(), 42);
 \subsection{Aliasing}
 \label{sec:aliasing}
 
-  www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3988.pdf
+Aliasing between different data structures may prevent the compiler
+from doing aggressive optimizations. Some proposals exist using
+generalize attributes \cite{C++:N3988:aliasing} but it can also be
+done with accessors such as:
+\begin{lstlisting}
+double a[N], b[N];
+// Dummy class declarations to be used as alias set tags
+class ta;
+class tb;
+
+auto ca = make_accessor<alias_tag<ta>>(build_complex_data_structure(a));
+auto cb = make_accessor<alias_tag<tb>>(build_complex_data_structure(b));
+auto oa = make_accessor<alias_tag<ta>>(other_complex_data_structure(a));
+auto ob = make_accessor<alias_tag<tb>>(other_complex_data_structure(b));
+// No aliasing
+correlation(ca, cb);
+correlation(oa, ob);
+// Aliasing
+correlation(ca, oa);
+correlation(cb, ob);
+\end{lstlisting}
+
+Inside \lstinline|correlation()| the compiler can use the aliasing
+information to optimize more or less the code, as with generalized
+attribute from \cite{C++:N3988:aliasing}, but with a type as a tag.
+
+But since it is an accessor class, the programmer can query the
+accessor aliasing status with a type trait (\S~\ref{sec:type-traits})
+to know if there are aliasing between accessors and if so statically
+dispatch completely different algorithms.
 
 
 \subsection{Sequential access}
@@ -680,13 +710,14 @@ time, in the form of
 For example it is possible to test if 2 accessor types are aliasing or
 not:
 \begin{lstlisting}
-auto vector_copy = [](auto src, auto dst) {
-  if constexpr (std::is_accessor_v<aliasing_with>(src, dst))
-    slow_conservative_copy(src, dst);
+auto correlation = [](auto data1, auto data2) {
+  if constexpr (std::is_accessor_v<aliasing_with>(data1, data2))
+    slow_conservative_correlation(data1, data2);
   else
-    crazy_aggressive_copy(src, dst);
+    crazy_aggressive_correlation(data1, data2);
 };
 \end{lstlisting}
+to go back to the example from \S~\ref{sec:aliasing}.
 
 
 \section{Implicit accessor}
