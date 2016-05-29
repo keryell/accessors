@@ -626,12 +626,22 @@ accessor.
 \subsection{Address bit setting}
 \label{sec:address-bit-setting}
 
-Some architecture encode in the address bus some semantics which is
+Some architectures encode in the address bus some semantics which is
 not used as the part of the address itself, such as supervisor mode,
 non executable mode, etc.
 
 A bit-setting accessor allows to change the address bit accordingly
-during read or write operations.
+during read or write operations:
+\begin{lstlisting}
+int a[N];
+a[0] = 2;
+// On the target architecture, the address space is duplicated on the
+// half upper 32KB space for a cacheless access
+std::accessor<bit_set<or<(1 << 15)>>> cacheless_access { a };
+// as a[123] but do not use the cache
+cacheless_access[123] = 4;
+\end{lstlisting}
+
 
 
 \subsection{Transactional memory}
