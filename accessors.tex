@@ -188,20 +188,21 @@ of reading or writing than on the kind of object.
 \section{Accessor}
 \label{sec:accessor}
 
-An \lstinline|std::accessor<T, access_type...>| is a variadic
+An \lstinline|std::accessor<T, access_kind...>| is a variadic
 templated class that act as a proxy object to qualify how an original
 \lstinline|T| object is accessed.
 
 Since there are a lot of different ways to access an object, we prefer
 to have the accessor to be parametrized by the kind of accessor
 instead of having completely different explicit accessor classes:
-
 \begin{lstlisting}
 auto io = get_some_memory_mapped_io();
 std::accessor<write> use_it { io };
 // Now we are sure this is a write-only usage
 some_random_code(use_it);
 \end{lstlisting}
+with the type of the data accessed actually inferred from the
+constructor.
 
 Accessors actually compose to define more complex access modes from
 basic ones, such as:
