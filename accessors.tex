@@ -287,6 +287,12 @@ std::copy(std::begin(local), std::end(local), std::begin(remote));
 Typical environments usable with this could be SHMEM, Portal4, SYCL,
 Coarray C++, RDMA, iWARP, MPI...
 
+Actually the real power from remote accessors would come from the
+combination with the \lstinline|array_ref|
+\cite{C++:P0009R1:array_ref} to have a simple implementation of the
+higher-level accessors found in SYCL or Coarray C++, or implement some
+for the other environments.
+
 
 \subsection{Read/write qualifiers}
 \label{sec:readwrite-qualifiers}
@@ -362,7 +368,7 @@ correlation(cb, ob);
 
 Inside \lstinline|correlation()| the compiler can use the aliasing
 information to optimize more or less the code, as with generalized
-attribute from \cite{C++:N3988:aliasing}, but with a type as a tag.
+attributes from \cite{C++:N3988:aliasing}, but with a type as a tag.
 
 But since it is an accessor class, the programmer can query the
 accessor aliasing status with a type trait (\S~\ref{sec:type-traits})
