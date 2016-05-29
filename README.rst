@@ -2,7 +2,7 @@ Accessors: a C++ standard library class to qualify data accesses
 ================================================================
 
 :Document:  P0367R0
-:Date:      2016-05-30
+:Date:      2016-05-29
 :Project:   ISO/IEC JTC1 SC22 WG21 Programming Language C++
 :Audience:  SG14, SG1, LEWG
 :Author:    Ronan Keryell (Xilinx), Joël Falcou (NumScale)

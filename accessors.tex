@@ -25,7 +25,7 @@
 \begin{tabular}{|r|l|}
   \hline
   \textbf{Document} & P0367R0\\\hline
-  \textbf{Date} & 2016-05-30\\\hline
+  \textbf{Date} & 2016-05-29\\\hline
   \textbf{Project} & ISO/IEC JTC1 SC22 WG21 Programming Language C++\\\hline
   \textbf{Audience} & SG14, SG1, LEWG\\\hline
   \textbf{Authors} &  Ronan Keryell (Xilinx), Joël Falcou (NumScale)\\\hline
@@ -172,6 +172,56 @@ of reading or writing than on the kind of object.
 \section{Accessor}
 \label{sec:accessor}
 
+An \lstinline|std::accessor<T, access_type...>| is a variadic
+templated class that act as a proxy object to qualify how an original
+\lstinline|T| object is accessed.
+
+Since there are a lot of different ways to access an object, we prefer
+to have the accessor to be parametrized by the kind of accessor
+instead of having completely different explicit accessor classes:
+
+\begin{lstlisting}
+auto io = get_some_memory_mapped_io();
+std::accessor<write> use_it { io };
+// Now we are sure this is a write-only usage
+some_random_code(use_it);
+\end{lstlisting}
+
+Accessors actually compose to define more complex access modes from
+basic ones, such as:
+\begin{lstlisting}
+unsigned char buffer[N];
+// Combine a write-only accessor with a modulo accessor to have a
+// write-only circular buffer
+std::accessor<std::accessor<modulo>, write> wcb { buffer };
+generate_some_data(wcb);
+\end{lstlisting}
+The order of composition matters to match the requested semantics.
+
+Of course the syntax becomes cumbersome and this is why the accessor
+is actually a variadic templated class so the previous example can be
+simplified as
+\begin{lstlisting}
+unsigned char buffer[N];
+// Combine a write-only accessor with a modulo accessor to have a
+// write-only circular buffer
+std::accessor<write, modulo> wcb { buffer };
+generate_some_data(wcb);
+\end{lstlisting}
+with the accessor types combined from left to write in the order
+mathematical function composition: \emph{make a write accessor on top
+  of (from) a modulo accessor.} If some constructor arguments are
+required by the accessor there are matched in the reverse order.
+
+A variadic templated factory method is also provided and usable as:
+\begin{lstlisting}
+double a[10000];
+auto p = std::make_accessor<prefetch<16>> { a };
+// Use p as a but prefetch from memory 16 elements ahead
+f(p);
+\end{lstlisting}
+
+
 \subsection{Non unified memory}
 \label{sec:non-unified-memory}
 
@@ -311,7 +361,7 @@ combined with non temporal access.
 \begin{lstlisting}
 int a[N];
 // Instruct the memory prefetcher to look 16 elements ahead
-std::accessor<prefetch<16>> { a_p };
+std::accessor<prefetch<16>> a_p { a };
 std::fill(std::begin(a_p), std::end(a_p), 0);
 \end{lstlisting}
 
