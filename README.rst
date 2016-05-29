@@ -7,6 +7,9 @@ Accessors: a C++ standard library class to qualify data accesses
 :Audience:  SG14, SG1, LEWG
 :Author:    Ronan Keryell (Xilinx), Joël Falcou (NumScale)
 
+PDF version:
+https://github.com/keryell/accessors/raw/gh-pages/accessors.pdf
+
 Accessing data is the most important aspect when it comes to
 high-performance computing or power efficiency in embedded computing.
 Furthermore, generalizing C++ to targets such as GPU or FPGA requires
