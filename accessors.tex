@@ -130,8 +130,8 @@ with metaprogramming according to some access properties.
 \section{Related work}
 \label{sec:related-work}
 
-In current C++ standard and proposals, some architectural aspects can
-already or will be addressed:
+In current C++ standard and proposals or other libraries, some
+architectural aspects can already or will be addressed:
 \begin{description}
 \item[\texttt{thread}] can be used to execute some code in parallel
   on multiple execution units;
@@ -140,9 +140,15 @@ already or will be addressed:
 \item[constructors and destructors] can hide some architectural details
   and semantics;
 \item[operator overloading] is useful to hide some hardware
-  operations;
-\item[\texttt{auto} operator overloading] would make cleaner implementation of
-  proxy to some hardware details and cleaning up expression templates;
+  operations
+  \begin{description}
+  \item[\texttt{auto} operator overloading] would make cleaner
+    implementation of proxy to some hardware details and cleaning up
+    expression templates;
+  \item[operator dot overloading with function objects]
+    \cite{C++:P0060R0:function_operator_dot} presents some interesting
+    use case to change the object behaviour;
+  \end{description}
 \item[fixed-point] type proposals are useful to have better
   performance on DSP and FPGA;
 \item[the concept of view] has some similarities but is more focused
