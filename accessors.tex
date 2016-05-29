@@ -148,7 +148,11 @@ already or will be addressed:
 \item[the concept of view] has some similarities but is more focused
   on some kind of objects, such as \lstinline|array_view| for arrays,
   \lstinline|string_view| for strings, or \lstinline|span| to view a
-  sequence as a range;
+  sequence as a range:
+  \begin{description}
+  \item[array\_ref] \cite{C++:P0009R1:array_ref} is a proxy object to
+    view some array-like objects in various ways;
+  \end{description}
 \item[SYCL] is a proposal to execute some functors on some
   accelerators with possibly different address spaces;
 \item non-temporal accessor in Boost.SIMD;
@@ -345,8 +349,18 @@ for (int i = 0; i != N; ++i) {
 To take advantage from DMA to transfer data, the transfer can be
 encoded as a DMA operation with a DMA accessor.
 
+\begin{lstlisting}
+int far_far_away[N];
+int near_and_fast[N];
+{
+  auto make_accessor<dma> { far_far_away, near_and_fast };
+  std::generate(p, p + 20, 0);
+}near_and_fast
+}
+\end{lstlisting}
 TODO.
 
+% How to deal with generic DMA patterns, non compact objects?
 
 \subsection{Memory protection}
 \label{sec:memory-protection}
@@ -673,7 +687,7 @@ proposal yet.
 
 % http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/
 \bibliography{accessors}
-\bibliographystyle{apalike}
+\bibliographystyle{alpha}
 
 \end{document}
 
