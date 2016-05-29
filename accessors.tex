@@ -8,6 +8,9 @@
 \usepackage{listings}
 \lstset{language=C++,basicstyle=\small\ttfamily}
 
+% Limit line overflow
+\sloppy
+
 \title{Accessors\\
   ---\\
   a C++ standard library class to qualify data accesses}
@@ -664,7 +667,8 @@ have ``array regions'' (polyhedral approximations of accesses) in
 accessors, even it did not get trough this proposal yet.
 
 Thanks to Albert Cohen for the discussion on how we could have the
-Pencil IR into C++, even it did not get trough this proposal yet.
+PENCIL IR \cite{PENCIL} into C++, even it did not get trough this
+proposal yet.
 
 
 % http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/
