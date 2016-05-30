@@ -1,0 +1,83 @@
+#! /bin/bash -vx
+
+# Publish the PDF on GitHub
+
+# Ronan Keryell at xilinx point COM
+
+# Publish on GitHub the PDF for the master branch of this git repository.
+
+# This script is to be used in the top-level directory of the git
+# repository.
+# Everything is quite hard-coded but it is not to be used outside of the
+# web-site maintenance...
+
+
+# Recycle some ideas I used in the publication of the Par4All web-site
+# and triSYCL on GitHub
+
+# Exit if an error occurs rather than unspecified dangerous behaviour...
+set -e
+
+# Use another copy of the git repository to avoid messing up with the
+# state of the current repository
+tmp_git=tmp_publish_github_pages
+
+doc=accessors.pdf
+# Work in a new working copy of the repository to compile the WWW pages
+rm -rf $tmp_git
+# Assume we are in the top directory of the reference repository so we can
+# clone it
+git clone . $tmp_git
+cd $tmp_git
+
+# Build the document
+make
+mv $doc .tmp
+
+# The special gh-pages branch is used by GitHub as the GitHub Pages WWW
+# site.
+# (Assume a previous initialization with git checkout --orphan gh-pages)
+git checkout gh-pages
+
+# Keep only the document
+rm -rf *
+mv .tmp $doc
+
+# Take also into account what has been deleted
+git add --update
+
+# Create a snapshot of the index content
+tree_object=`git write-tree`
+
+# Construct a log message with the list of commits since the previous
+# publication
+echo "Publish new PDF version" > commit_message
+
+set +e
+git log gh-pages^2..master > commit_list
+# If the previous command succeeded, there are some commits to talk about
+[ $? = 0 ] && (
+    echo
+    echo "The list of commits since last publication:"
+    echo
+    cat commit_list
+) > commit_message
+set -e
+
+
+# Create a commit object that takes into account its natural history but
+# also the master branch as an ancestor so we can figure out easily which
+# source of the WWW site is currently published
+commit_object=`git commit-tree -p HEAD -p master \
+  -F commit_message $tree_object`
+
+# Update the gh-pages branch to this commit object. By construction this
+# is not a merge, it is just a fast-forward update, but add --ff-only to
+# assert this
+git merge --ff-only $commit_object
+
+# Update the gh-pages branch on the reference git repository
+git push
+
+echo To do the publication, just push the gh-pages branch on GitHub
+echo To revert this generation: git branch -f gh-pages gh-pages^
