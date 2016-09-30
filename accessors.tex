@@ -555,7 +555,7 @@ encoded as a DMA operation with a DMA accessor.
 int far_far_away[N];
 {
   int near_and_fast[N];
-  auto make_accessor<dma> { far_far_away, near_and_fast };
+  auto p = make_accessor<dma> { far_far_away, near_and_fast };
   std::generate(p, p + 20, 0);
 }
 \end{lstlisting}
