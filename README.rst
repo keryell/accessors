@@ -9,6 +9,13 @@ Accessors: a C++ standard library class to qualify data accesses
 
 PDF version:
 https://github.com/keryell/accessors/raw/gh-pages/accessors.pdf
+http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0367r0.pdf
+
+Slides of the presentation in Oulu:
+https://github.com/keryell/accessors/raw/gh-pages/2016-06-25-C++_accessors_Oulu-expose.pdf
+
+Abstract
+--------
 
 Accessing data is the most important aspect when it comes to
 high-performance computing or power efficiency in embedded computing.
